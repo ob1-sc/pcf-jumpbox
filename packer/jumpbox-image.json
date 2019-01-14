@@ -1,0 +1,55 @@
+{
+  "variables": {
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+    "aws_region": "{{env `AWS_REGION`}}",
+    "base_ami_filter_name": "ubuntu/images/*ubuntu-bionic-18.04-amd64-server-*",
+    "base_ami_filter_owner": "099720109477",
+    "builder_instance_type": "t2.micro",
+    "builder_ssh_username": "ubuntu",
+    "playbook_dir": null,
+    "ami_name": "pcf-jumpbox-ami"
+  },
+  "builders": [{
+    "type": "amazon-ebs",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "region": "{{user `aws_region`}}",
+    "source_ami_filter": {
+      "filters": {
+        "virtualization-type": "hvm",
+        "name": "{{user `base_ami_filter_name`}}",
+        "root-device-type": "ebs"
+      },
+      "owners": "{{user `base_ami_filter_owner`}}",
+      "most_recent": true
+    },
+    "instance_type": "{{user `builder_instance_type`}}",
+    "ssh_username": "{{user `builder_ssh_username`}}",
+    "ami_name": "{{user `ami_name`}}"
+  }],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "sleep 30",
+        "sudo apt-add-repository ppa:ansible/ansible -y -u",
+        "sudo apt-get update",
+        "sudo apt-get install software-properties-common ansible -y",
+        "sudo apt install python-pip -y",
+        "sudo pip install jmespath"
+      ]
+    },
+    {
+      "type": "ansible-local",
+      "playbook_dir": "{{user `playbook_dir`}}",
+      "playbook_file": "{{user `playbook_dir`}}/local.yml",
+      "extra_arguments": [ "--extra-vars \"user=ubuntu\"" ]
+    }
+  ],
+  "post-processors": [{
+    "type": "manifest",
+    "output": "manifest.json",
+    "strip_path": true
+  }]
+}
